@@ -58,6 +58,7 @@ Legacy/BootSector/bin
 Utilities/AppleEfiSignTool/AppleEfiSignTool
 Utilities/ACPIe/ACPIe
 Utilities/acdtinfo/acdtinfo
+Utilities/BaseTools/bin.*
 Utilities/disklabel/disklabel
 Utilities/EfiResTool/EfiResTool
 Utilities/ext4read/ext4read
@@ -89,3 +90,6 @@ Utilities/TestProcessKernel/ProcessKernel
 Utilities/TestNtfsDxe/TestNtfsDxe
 Utilities/TestExt4Dxe/TestExt4Dxe
 Utilities/TestFatDxe/TestFatDxe
+Utilities/LegacyBoot/ROOT
+Utilities/LegacyBoot/OpenCore.raw
+Utilities/LegacyBoot/boot

@@ -66,6 +66,8 @@ typedef enum {
   LABEL_SHELL,
   LABEL_SIP_IS_ENABLED,
   LABEL_SIP_IS_DISABLED,
+  LABEL_FIRMWARE_SETTINGS,
+  LABEL_NETWORK_BOOT,
   LABEL_NUM_TOTAL
 } LABEL_TARGET;
 
@@ -123,7 +125,8 @@ typedef struct _BOOT_PICKER_GUI_CONTEXT {
   BOOLEAN                                HideAuxiliary;
   BOOLEAN                                Refresh;
   BOOLEAN                                LightBackground;
-  BOOLEAN                                DoneIntroAnimation;
+  BOOLEAN                                UsePasswordEaseIn;
+  BOOLEAN                                UseMenuEaseIn;
   BOOLEAN                                ReadyToBoot;
   UINT8                                  Scale;
   UINT8                                  VoAction;

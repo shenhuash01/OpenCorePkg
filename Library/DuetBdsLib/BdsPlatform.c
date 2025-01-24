@@ -357,17 +357,45 @@ UpdateMemoryMap (
                       MemorySpaceMap[Index].BaseAddress,
                       MemorySpaceMap[Index].Length
                       );
-      if (!EFI_ERROR (Status)) {
-        Status = gDS->AddMemorySpace (
-                        (Capabilities & EFI_MEMORY_MORE_RELIABLE) == EFI_MEMORY_MORE_RELIABLE
-            ? EfiGcdMemoryTypeMoreReliable : EfiGcdMemoryTypeSystemMemory,
-                        MemorySpaceMap[Index].BaseAddress,
-                        MemorySpaceMap[Index].Length,
-                        Capabilities &~(EFI_MEMORY_PRESENT | EFI_MEMORY_INITIALIZED | EFI_MEMORY_TESTED | EFI_MEMORY_RUNTIME)
-                        );
+      if (EFI_ERROR (Status)) {
+        //
+        // This loop's purpose is to free reserved memory above 4GB. DxeCore
+        // itself is also found (below 4GB) and gives Access Denied here
+        // because it is associated with an image handle.
+        // TODO: Is it is possible to work round issue in first REF (note: that
+        // line dates to original EDK II DuetPkg) while still allowing DxeCore
+        // memory to be mapped as System rather than Reserved in the first place
+        // (see second REF)? (If it's not mapped correctly in the first place
+        // and it's associated with an image handle, it can't be remapped later
+        // using gDS calls.)
+        // REF: https://github.com/acidanthera/OpenCorePkg/blob/2462e02d49b8b9f2562ca76850b73477cc573d47/Legacy/BootPlatform/DxeIpl/HobGeneration.c#L201
+        // REF: https://github.com/acidanthera/audk/blob/e26eb0f9c18e6672c9516dbfdebf2dd9f750207e/MdeModulePkg/Core/Dxe/Gcd/Gcd.c#L2577-L2587
+        //
+        DEBUG ((
+          EFI_D_INFO,
+          "UpdateMemoryMap: Remove %016lx %016lx - %r\n",
+          MemorySpaceMap[Index].BaseAddress,
+          MemorySpaceMap[Index].Length,
+          Status
+          ));
+        continue;
       }
 
+      Status = gDS->AddMemorySpace (
+                      (Capabilities & EFI_MEMORY_MORE_RELIABLE) == EFI_MEMORY_MORE_RELIABLE
+          ? EfiGcdMemoryTypeMoreReliable : EfiGcdMemoryTypeSystemMemory,
+                      MemorySpaceMap[Index].BaseAddress,
+                      MemorySpaceMap[Index].Length,
+                      Capabilities &~(EFI_MEMORY_PRESENT | EFI_MEMORY_INITIALIZED | EFI_MEMORY_TESTED | EFI_MEMORY_RUNTIME)
+                      );
       ASSERT_EFI_ERROR (Status);
+      DEBUG ((
+        EFI_D_INFO,
+        "UpdateMemoryMap: Remap %016lx %016lx - %r\n",
+        MemorySpaceMap[Index].BaseAddress,
+        MemorySpaceMap[Index].Length,
+        Status
+        ));
     }
   }
 
@@ -517,123 +545,6 @@ UpdateMemoryMap (
            MemoryDescHob.MemDesc[Index].Attribute
            );
   }
-}
-
-STATIC
-EFI_STATUS
-DisableUsbLegacySupport (
-  VOID
-  )
-
-/*++
-
-Routine Description:
-  Disable the USB legacy Support in all Ehci and Uhci.
-  This function assume all PciIo handles have been created in system.
-
-Arguments:
-  None
-
-Returns:
-  EFI_SUCCESS
-  EFI_NOT_FOUND
---*/
-{
-  EFI_STATUS           Status;
-  EFI_HANDLE           *HandleArray;
-  UINTN                HandleArrayCount;
-  UINTN                Index;
-  EFI_PCI_IO_PROTOCOL  *PciIo;
-  UINT8                Class[3];
-  UINT16               Command;
-  UINT32               HcCapParams;
-  UINT32               ExtendCap;
-  UINT32               Value;
-  UINT32               TimeOut;
-
-  //
-  // Find the usb host controller
-  //
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiPciIoProtocolGuid,
-                  NULL,
-                  &HandleArrayCount,
-                  &HandleArray
-                  );
-  if (!EFI_ERROR (Status)) {
-    for (Index = 0; Index < HandleArrayCount; Index++) {
-      Status = gBS->HandleProtocol (
-                      HandleArray[Index],
-                      &gEfiPciIoProtocolGuid,
-                      (VOID **)&PciIo
-                      );
-      if (!EFI_ERROR (Status)) {
-        //
-        // Find the USB host controller controller
-        //
-        Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint8, 0x09, 3, &Class);
-        if (!EFI_ERROR (Status)) {
-          if ((PCI_CLASS_SERIAL == Class[2]) &&
-              (PCI_CLASS_SERIAL_USB == Class[1]))
-          {
-            if (PCI_IF_UHCI == Class[0]) {
-              //
-              // Found the UHCI, then disable the legacy support
-              //
-              Command = 0;
-              Status  = PciIo->Pci.Write (PciIo, EfiPciIoWidthUint16, 0xC0, 1, &Command);
-            } else if (PCI_IF_EHCI == Class[0]) {
-              //
-              // Found the EHCI, then disable the legacy support
-              //
-              Status = PciIo->Mem.Read (
-                                    PciIo,
-                                    EfiPciIoWidthUint32,
-                                    0,                       ///< EHC_BAR_INDEX
-                                    (UINT64)0x08,            ///< EHC_HCCPARAMS_OFFSET
-                                    1,
-                                    &HcCapParams
-                                    );
-
-              ExtendCap = (HcCapParams >> 8) & 0xFF;
-              //
-              // Disable the SMI in USBLEGCTLSTS firstly
-              // Not doing this may result in a hardlock soon after
-              //
-              PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, ExtendCap + 0x4, 1, &Value);
-              Value &= 0xFFFF0000;
-              PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, ExtendCap + 0x4, 1, &Value);
-
-              //
-              // Get EHCI Ownership from legacy bios
-              //
-              PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, ExtendCap, 1, &Value);
-              Value |= (0x1 << 24);
-              PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, ExtendCap, 1, &Value);
-
-              TimeOut = 40;
-              while (TimeOut--) {
-                gBS->Stall (500);
-
-                PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, ExtendCap, 1, &Value);
-
-                if ((Value & 0x01010000) == 0x01000000) {
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    gBS->FreePool (HandleArray);
-  } else {
-    return Status;
-  }
-
-  return EFI_SUCCESS;
 }
 
 STATIC
@@ -1090,14 +1001,6 @@ Returns:
     //
     DetectAndPreparePlatformPciDevicePath (TRUE);
   }
-
-  //
-  // The ConIn devices connection will start the USB bus, should disable all
-  // Usb legacy support firstly.
-  // Caution: Must ensure the PCI bus driver has been started. Since the
-  // ConnectRootBridge() will create all the PciIo protocol, it's safe here now
-  //
-  DisableUsbLegacySupport ();
 
   //
   // Connect the all the default console with current console variable

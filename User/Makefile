@@ -48,34 +48,44 @@ ifeq ($(WERROR),1)
 	CFLAGS += -Werror
 endif
 
-ifeq ($(shell echo 'int a;' | "${CC}" -Wno-unused-parameter -x c -c - -o /dev/null 2>&1),)
+#
+# On Windows, output file cannot be null.
+# Ref: https://github.com/msys2/MINGW-packages/issues/10520
+#
+ifeq ($(DIST),Windows)
+	OUT_BIN := /tmp/windows_out
+else
+	OUT_BIN := /dev/null
+endif
+
+ifeq ($(shell echo 'int a;' | "${CC}" -Wno-unused-parameter -x c -c - -o "${OUT_BIN}" 2>&1),)
 	CFLAGS += -Wno-unused-parameter
 endif
 
-ifeq ($(shell echo 'int a;' | "${CC}" -Wno-implicit-fallthrough -x c -c - -o /dev/null 2>&1),)
+ifeq ($(shell echo 'int a;' | "${CC}" -Wno-implicit-fallthrough -x c -c - -o "${OUT_BIN}" 2>&1),)
 	CFLAGS += -Wno-implicit-fallthrough
 endif
 
-ifeq ($(shell echo 'int a;' | "${CC}" -Wno-strict-aliasing -x c -c - -o /dev/null 2>&1),)
+ifeq ($(shell echo 'int a;' | "${CC}" -Wno-strict-aliasing -x c -c - -o "${OUT_BIN}" 2>&1),)
 	CFLAGS += -Wno-strict-aliasing
 endif
 
-ifeq ($(shell echo 'int a;' | "${CC}" -Wno-address -x c -c - -o /dev/null 2>&1),)
+ifeq ($(shell echo 'int a;' | "${CC}" -Wno-address -x c -c - -o "${OUT_BIN}" 2>&1),)
 	CFLAGS += -Wno-address
 endif
 
-ifeq ($(shell echo 'int a;' | "${CC}" -Wno-stringop-overflow -x c -c - -o /dev/null 2>&1),)
+ifeq ($(shell echo 'int a;' | "${CC}" -Wno-stringop-overflow -x c -c - -o "${OUT_BIN}" 2>&1),)
 	CFLAGS += -Wno-stringop-overflow
 endif
 
 ifeq ($(DIST),Darwin)
 	ifneq ($(FUZZ),1)
-		ifeq ($(UDK_ARCH),Ia32)
-			CFLAGS  += -mmacosx-version-min=10.6 --target=i386-apple-darwin
-			LDFLAGS += -mmacosx-version-min=10.6 --target=i386-apple-darwin
+		ifeq ($(FATBIN32),1)
+			CFLAGS  += -mmacosx-version-min=10.6 -arch x86_64 -arch i386
+			LDFLAGS += -mmacosx-version-min=10.6 -arch x86_64 -arch i386
 		else
-			CFLAGS  += -mmacosx-version-min=10.6 --target=x86_64-apple-darwin
-			LDFLAGS += -mmacosx-version-min=10.6 --target=x86_64-apple-darwin
+			CFLAGS  += -mmacosx-version-min=10.9 -arch x86_64 -arch arm64
+			LDFLAGS += -mmacosx-version-min=10.9 -arch x86_64 -arch arm64
 		endif
 	endif
 endif
@@ -146,7 +156,7 @@ endif
 # Search Paths.
 #
 CFLAGS += -I$(OC_USER)/User/Include
-CFLAGS += -I$(OC_USER)/Include/Acidanthera -I$(OC_USER)/Include/Apple -I$(OC_USER)/Include/Apple/$(UDK_ARCH) -I$(OC_USER)/Include/Generic -I$(OC_USER)/Include/Intel -I$(OC_USER)/Include/Microsoft -I$(OC_USER)/Include/Nvidia
+CFLAGS += -I$(OC_USER)/Include/Acidanthera -I$(OC_USER)/Include/Apple -I$(OC_USER)/Include/Apple/$(UDK_ARCH) -I$(OC_USER)/Include/Duet -I$(OC_USER)/Include/Generic -I$(OC_USER)/Include/Intel -I$(OC_USER)/Include/Microsoft -I$(OC_USER)/Include/Nvidia
 
 #
 # Skip including UDK when suggesting STANDALONE mode.

@@ -142,6 +142,7 @@ OC_DECLARE (OC_BOOTER_PATCH_ARRAY)
   _(BOOLEAN                     , DiscardHibernateMap       ,     , FALSE  , ()) \
   _(BOOLEAN                     , EnableSafeModeSlide       ,     , FALSE  , ()) \
   _(BOOLEAN                     , EnableWriteUnprotector    ,     , FALSE  , ()) \
+  _(BOOLEAN                     , FixupAppleEfiImages       ,     , FALSE  , ()) \
   _(BOOLEAN                     , ForceBooterSignature      ,     , FALSE  , ()) \
   _(BOOLEAN                     , ForceExitBootServices     ,     , FALSE  , ()) \
   _(BOOLEAN                     , ProtectMemoryRegions      ,     , FALSE  , ()) \
@@ -606,6 +607,13 @@ OC_DECLARE (OC_PLATFORM_CONFIG)
 **/
 
 ///
+/// Array of driver names to unload.
+///
+#define OC_UEFI_UNLOAD_ARRAY_FIELDS(_, __) \
+  OC_ARRAY (OC_STRING, _, __)
+OC_DECLARE (OC_UEFI_UNLOAD_ARRAY)
+
+///
 /// Drivers is an ordered array of drivers to load.
 ///
 #define OC_UEFI_DRIVER_ENTRY_FIELDS(_, __) \
@@ -748,6 +756,7 @@ OC_DECLARE (OC_UEFI_PROTOCOL_OVERRIDES)
   _(BOOLEAN                     , ReleaseUsbOwnership         ,     , FALSE  , ()) \
   _(BOOLEAN                     , ReloadOptionRoms            ,     , FALSE  , ()) \
   _(BOOLEAN                     , RequestBootVarRouting       ,     , FALSE  , ()) \
+  _(BOOLEAN                     , ShimRetainProtocol          ,     , FALSE  , ()) \
   _(BOOLEAN                     , UnblockFsConnect            ,     , FALSE  , ()) \
   _(BOOLEAN                     , ForceOcWriteFlash           ,     , FALSE  , ())
 OC_DECLARE (OC_UEFI_QUIRKS)
@@ -780,7 +789,8 @@ OC_DECLARE (OC_UEFI_RSVD_ARRAY)
   _(OC_UEFI_OUTPUT              , Output            ,     , OC_CONSTR2 (OC_UEFI_OUTPUT, _, __)             , OC_DESTR (OC_UEFI_OUTPUT)) \
   _(OC_UEFI_PROTOCOL_OVERRIDES  , ProtocolOverrides ,     , OC_CONSTR2 (OC_UEFI_PROTOCOL_OVERRIDES, _, __) , OC_DESTR (OC_UEFI_PROTOCOL_OVERRIDES)) \
   _(OC_UEFI_QUIRKS              , Quirks            ,     , OC_CONSTR2 (OC_UEFI_QUIRKS, _, __)             , OC_DESTR (OC_UEFI_QUIRKS)) \
-  _(OC_UEFI_RSVD_ARRAY          , ReservedMemory    ,     , OC_CONSTR2 (OC_UEFI_RSVD_ARRAY, _, __)         , OC_DESTR (OC_UEFI_RSVD_ARRAY))
+  _(OC_UEFI_RSVD_ARRAY          , ReservedMemory    ,     , OC_CONSTR2 (OC_UEFI_RSVD_ARRAY, _, __)         , OC_DESTR (OC_UEFI_RSVD_ARRAY)) \
+  _(OC_UEFI_UNLOAD_ARRAY        , Unload            ,     , OC_CONSTR2 (OC_UEFI_UNLOAD_ARRAY, _, __)       , OC_DESTR (OC_UEFI_UNLOAD_ARRAY))
 OC_DECLARE (OC_UEFI_CONFIG)
 
 /**

@@ -35,13 +35,14 @@
   PrintLib
   LzmaDecompressLib
   SerialPortLib
+  UefiImageOnlyFvLib
 
 [Sources]
-  PeLoader.h
+  Debug.h
   Support.h
-  EfiLdrHandoff.h
   EfiLdr.h
   EfiLoader.c
+  Debug.c
   PeLoader.c
   Support.c
   LzmaDecompress.h
